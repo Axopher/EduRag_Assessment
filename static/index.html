@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduRAG: Intelligent Tutor Playground</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f9fafb;
+        color: #111827;
+      }
+
+      .bg-surface {
+        background-color: #ffffff;
+      }
+
+      .bg-section {
+        background-color: #f3f4f6;
+      }
+
+      .btn {
+        background-color: #3b82f6;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+      }
+
+      .btn:hover {
+        background-color: #2563eb;
+      }
+
+      .input,
+      .textarea,
+      .select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 16px;
+        margin-bottom: 15px;
+      }
+
+      .input:focus,
+      .textarea:focus,
+      .select:focus {
+        border-color: #3b82f6;
+        outline: none;
+      }
+
+      .card {
+        border-radius: 10px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      .message-box {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #fca5a5;
+        display: none;
+      }
+
+      .loading-indicator {
+        text-align: center;
+        margin-top: 12px;
+        color: #3b82f6;
+        font-weight: 600;
+        display: none;
+      }
+
+      /* Toast Notification */
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #38a169; /* Green for success */
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s ease, transform 0.4s ease;
+        z-index: 9999;
+      }
+      .toast.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .toast.error {
+        background-color: #e53e3e;
+      }
+    </style>
+  </head>
+
+  <body class="flex justify-center px-4 py-6">
+    <div class="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="col-span-full text-center">
+        <h1 class="text-3xl font-bold mb-2">
+          📚 EduRAG: Intelligent Tutor Playground
+        </h1>
+        <p class="text-gray-600">
+          Upload content, ask questions, and get intelligent answers!
+        </p>
+      </div>
+
+      <div id="messageBox" class="message-box col-span-full"></div>
+
+      <!-- Upload Section -->
+      <div class="bg-section card">
+        <h2 class="text-2xl font-semibold mb-4">⬆️ Upload Content</h2>
+        <form id="uploadForm">
+          <label>Text File:</label>
+          <input
+            type="file"
+            id="uploadFile"
+            accept=".txt"
+            class="input"
+            required
+          />
+
+          <label>Title:</label>
+          <input
+            type="text"
+            id="uploadTitle"
+            placeholder="e.g., Photosynthesis"
+            class="input"
+            required
+          />
+
+          <label>Topic:</label>
+          <input
+            type="text"
+            id="uploadTopic"
+            placeholder="e.g., Biology"
+            class="input"
+            required
+          />
+
+          <label>Grade:</label>
+          <input
+            type="text"
+            id="uploadGrade"
+            placeholder="e.g., 7th Grade"
+            class="input"
+            required
+          />
+
+          <button type="submit" class="btn">Upload</button>
+          <div id="uploadStatus" class="loading-indicator"></div>
+        </form>
+      </div>
+
+      <!-- Ask Section -->
+      <div class="bg-section card">
+        <h2 class="text-2xl font-semibold mb-4">❓ Ask the Tutor</h2>
+        <form id="askForm">
+          <label>Your Question:</label>
+          <textarea
+            id="questionInput"
+            rows="4"
+            placeholder="e.g., Explain the water cycle."
+            class="textarea"
+            required
+          ></textarea>
+
+          <label>Tutor Persona:</label>
+          <select id="personaSelect" class="select">
+            <option value="friendly">Friendly</option>
+            <option value="strict">Strict</option>
+            <option value="humorous">Humorous</option>
+            <option value="default">Default</option>
+          </select>
+
+          <div class="flex items-center mb-3">
+            <input type="checkbox" id="isSqlQuery" class="mr-2" />
+            <label for="isSqlQuery">Natural Language SQL Query?</label>
+          </div>
+
+          <button type="submit" class="btn">Get Answer</button>
+          <div id="askStatus" class="loading-indicator"></div>
+        </form>
+
+        <div class="mt-6">
+          <h3 class="text-lg font-semibold mb-2">AI Answer:</h3>
+          <div
+            id="answerDisplay"
+            class="bg-white border rounded p-4 min-h-[150px] max-h-[300px] overflow-y-auto whitespace-pre-wrap text-sm"
+          ></div>
+          <div
+            id="retrievedContentIds"
+            class="text-gray-400 mt-2 text-sm"
+          ></div>
+          <div
+            id="feedbackSection"
+            class="mt-4 flex gap-4"
+            style="display: none"
+          >
+            <button
+              id="feedbackGood"
+              data-rating="5"
+              class="btn bg-green-500 hover:bg-green-600"
+            >
+              👍 Good
+            </button>
+            <button
+              id="feedbackBad"
+              data-rating="1"
+              class="btn bg-red-500 hover:bg-red-600"
+            >
+              👎 Bad
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="bg-section card col-span-full">
+        <h2 class="text-2xl font-semibold mb-4">📊 System Metrics</h2>
+        <button id="getMetricsBtn" class="btn mb-4">Refresh Metrics</button>
+        <div id="metricsDisplay" class="bg-white border rounded p-4 text-sm">
+          Loading metrics...
+        </div>
+      </div>
+
+      <!-- Topics -->
+      <div class="bg-section card col-span-full">
+        <h2 class="text-2xl font-semibold mb-4">📚 Topics & Grades</h2>
+        <div class="flex flex-wrap gap-3 mb-3">
+          <input
+            type="text"
+            id="filterTopic"
+            placeholder="Topic (e.g., Math)"
+            class="input flex-1 min-w-[150px]"
+          />
+          <input
+            type="text"
+            id="filterGrade"
+            placeholder="Grade (e.g., 9th)"
+            class="input flex-1 min-w-[150px]"
+          />
+          <button id="getTopicsBtn" class="btn">Filter</button>
+        </div>
+        <div id="topicsDisplay" class="bg-white border rounded p-4 text-sm">
+          Loading topics...
+        </div>
+      </div>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <script>
+      let currentQaLogId = null; // To store the ID for feedback
+
+      // Helper function to show messages
+      function showMessage(message, type = "error") {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast show ${type === "success" ? "" : "error"}`;
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          toast.classList.remove("show");
+        }, 4000);
+      }
+
+      // Helper function to show/hide loading indicators
+      function showLoading(elementId, show) {
+        document.getElementById(elementId).style.display = show
+          ? "block"
+          : "none";
+      }
+
+      // --- Content Upload ---
+      document
+        .getElementById("uploadForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          showLoading("uploadStatus", true);
+          document.getElementById("uploadStatus").textContent =
+            "Uploading content... This may take a moment to generate embeddings.";
+
+          const fileInput = document.getElementById("uploadFile");
+          const title = document.getElementById("uploadTitle").value;
+          const topic = document.getElementById("uploadTopic").value;
+          const grade = document.getElementById("uploadGrade").value;
+
+          if (!fileInput.files.length) {
+            showMessage("Please select a file to upload.");
+            showLoading("uploadStatus", false);
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("file", fileInput.files[0]);
+          formData.append("title", title);
+          formData.append("topic", topic);
+          formData.append("grade", grade);
+
+          try {
+            const response = await fetch("/upload-content", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Failed to upload content.");
+            }
+
+            const data = await response.json();
+            showMessage(
+              `Content "${data.title}" uploaded successfully!`,
+              "success"
+            );
+            document.getElementById("uploadForm").reset(); // Clear form
+            await getMetrics(); // Refresh metrics
+            await getTopics(); // Refresh topics
+          } catch (error) {
+            console.error("Error uploading content:", error);
+            showMessage(`Error uploading content: ${error.message}`);
+          } finally {
+            showLoading("uploadStatus", false);
+          }
+        });
+
+      // --- Ask Question ---
+      document
+        .getElementById("askForm")
+        .addEventListener("submit", async (event) => {
+          event.preventDefault();
+          showLoading("askStatus", true);
+          document.getElementById("askStatus").textContent =
+            "Getting answer...";
+          document.getElementById("answerDisplay").textContent = "Thinking...";
+          document.getElementById("retrievedContentIds").textContent = "";
+          document.getElementById("feedbackSection").style.display = "none"; // Hide feedback until answer is ready
+
+          const question = document.getElementById("questionInput").value;
+          const persona = document.getElementById("personaSelect").value;
+          const isSqlQuery = document.getElementById("isSqlQuery").checked;
+
+          try {
+            const response = await fetch("/ask", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                question: question,
+                persona: persona,
+                is_sql_query: isSqlQuery,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Failed to get answer.");
+            }
+
+            const data = await response.json();
+            document.getElementById("answerDisplay").textContent = data.answer;
+            currentQaLogId = data.qa_log_id; // Store for feedback
+
+            if (
+              data.retrieved_content_ids &&
+              data.retrieved_content_ids.length > 0
+            ) {
+              document.getElementById(
+                "retrievedContentIds"
+              ).textContent = `Retrieved content IDs: ${data.retrieved_content_ids.join(
+                ", "
+              )}`;
+            } else {
+              document.getElementById("retrievedContentIds").textContent = "";
+            }
+
+            document.getElementById("feedbackSection").style.display = "block"; // Show feedback buttons
+            await getMetrics(); // Refresh metrics
+          } catch (error) {
+            console.error("Error asking question:", error);
+            showMessage(`Error getting answer: ${error.message}`);
+            document.getElementById("answerDisplay").textContent =
+              "An error occurred while getting the answer.";
+          } finally {
+            showLoading("askStatus", false);
+          }
+        });
+
+      // --- Submit Feedback ---
+      document
+        .getElementById("feedbackGood")
+        .addEventListener("click", () => submitFeedback(5));
+      document
+        .getElementById("feedbackBad")
+        .addEventListener("click", () => submitFeedback(1));
+
+      async function submitFeedback(rating) {
+        if (currentQaLogId === null) {
+          showMessage(
+            "No answer to provide feedback for. Please ask a question first."
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch("/feedback", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              qa_log_id: currentQaLogId,
+              rating: rating,
+              comment: "", // Simple rating, no comment for now
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || "Failed to submit feedback.");
+          }
+
+          const data = await response.json();
+          showMessage(`Feedback submitted successfully!`, "success");
+          document.getElementById("feedbackSection").style.display = "none"; // Hide feedback after submission
+          currentQaLogId = null; // Reset
+          await getMetrics(); // Refresh metrics
+        } catch (error) {
+          console.error("Error submitting feedback:", error);
+          showMessage(`Error submitting feedback: ${error.message}`);
+        }
+      }
+
+      // --- Get Metrics ---
+      document
+        .getElementById("getMetricsBtn")
+        .addEventListener("click", getMetrics);
+
+      async function getMetrics() {
+        document.getElementById("metricsDisplay").textContent =
+          "Loading metrics...";
+        try {
+          const response = await fetch("/metrics");
+          if (!response.ok) {
+            throw new Error("Failed to fetch metrics.");
+          }
+          const data = await response.json();
+          document.getElementById("metricsDisplay").innerHTML = `
+                    <p><strong>Total Content Files:</strong> ${
+                      data.total_content_files
+                    }</p>
+                    <p><strong>Total Unique Topics:</strong> ${
+                      data.total_topics
+                    }</p>
+                    <p><strong>Total Questions Asked:</strong> ${
+                      data.total_questions_asked
+                    }</p>
+                    <p><strong>Total Feedback Received:</strong> ${
+                      data.total_feedback_received
+                    }</p>
+                    <p><strong>Average Feedback Rating:</strong> ${
+                      data.average_feedback_rating
+                        ? data.average_feedback_rating
+                        : "N/A"
+                    }</p>
+                `;
+        } catch (error) {
+          console.error("Error fetching metrics:", error);
+          document.getElementById("metricsDisplay").textContent =
+            "Failed to load metrics.";
+          showMessage(`Error fetching metrics: ${error.message}`);
+        }
+      }
+
+      // --- Get Topics ---
+      document
+        .getElementById("getTopicsBtn")
+        .addEventListener("click", getTopics);
+
+      async function getTopics() {
+        document.getElementById("topicsDisplay").textContent =
+          "Loading topics...";
+        const filterTopic = document.getElementById("filterTopic").value;
+        const filterGrade = document.getElementById("filterGrade").value;
+
+        let queryParams = new URLSearchParams();
+        if (filterTopic) queryParams.append("topic", filterTopic);
+        if (filterGrade) queryParams.append("grade", filterGrade);
+
+        try {
+          const response = await fetch(`/topics?${queryParams.toString()}`);
+          if (!response.ok) {
+            throw new Error("Failed to fetch topics.");
+          }
+          const data = await response.json();
+          if (data.length === 0) {
+            document.getElementById("topicsDisplay").textContent =
+              "No topics found matching your criteria.";
+          } else {
+            document.getElementById("topicsDisplay").innerHTML = data
+              .map((t) => `<p>${t.topic} (Grade: ${t.grade})</p>`)
+              .join("");
+          }
+        } catch (error) {
+          console.error("Error fetching topics:", error);
+          document.getElementById("topicsDisplay").textContent =
+            "Failed to load topics.";
+          showMessage(`Error fetching topics: ${error.message}`);
+        }
+      }
+
+      // Initial load of metrics and topics
+      document.addEventListener("DOMContentLoaded", () => {
+        getMetrics();
+        getTopics();
+      });
+    </script>
+  </body>
+</html>

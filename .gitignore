@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+*.env # For the .env file containing API keys
+
+# Database
+*.db # For SQLite database files like edurag.db
+*.sqlite3

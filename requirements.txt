@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+langchain
+langchain-openai # Or langchain-huggingface if you prefer
+faiss-cpu
+python-multipart
+python-dotenv
+tiktoken # Often a dependency for OpenAI models
+langchain-google-genai
+langchain-community
