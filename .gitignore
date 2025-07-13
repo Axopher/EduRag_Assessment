@@ -12,3 +12,4 @@ venv/
 # Database
 *.db # For SQLite database files like edurag.db
 *.sqlite3
+edurag.db
